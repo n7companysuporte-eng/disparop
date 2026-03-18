@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N7 Company CRM</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: linear-gradient(135deg, #0f172a, #020617);
+  color: white;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: #22c55e;
+}
+
+/* CONTAINER */
+.container {
+  max-width: 1100px;
+  margin: 30px auto;
+  padding: 20px;
+}
+
+/* CARD */
+.box {
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px);
+}
+
+/* INPUTS */
+input, textarea, select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #020617;
+  color: white;
+  outline: none;
+}
+
+/* BUTTON */
+button {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #22c55e;
+  color: black;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+/* LEADS */
+.lead {
+  background: rgba(255,255,255,0.03);
+  padding: 15px;
+  margin-top: 10px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* STATUS */
+.status {
+  margin-top: 8px;
+  padding: 6px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.frio { background: #6b7280; }
+.interessado { background: #f59e0b; }
+.muito { background: #22c55e; }
+.nao { background: #ef4444; }
+
+.small {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 5px;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* MOBILE */
+@media(max-width: 800px){
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div class="logo">🚀 N7 Company CRM</div>
+  <div>Gestão de Leads</div>
+</div>
+
+<div class="container">
+
+<div class="grid">
+
+<!-- CADASTRO -->
+<div class="box">
+<h2>➕ Novo Lead</h2>
+
+<input id="nome" placeholder="Nome">
+<input id="numero" placeholder="Número (5599...)">
+
+<button onclick="addLead()">Adicionar Lead</button>
+
+<select id="filtro" onchange="render()">
+  <option value="todos">Todos</option>
+  <option value="Frio">Frio</option>
+  <option value="Interessado">Interessado</option>
+  <option value="Muito interessado">Muito interessado</option>
+  <option value="Não interessado">Não interessado</option>
+</select>
+
+<button onclick="limparTudo()" style="background:#ef4444;color:white;">
+Resetar Tudo
+</button>
+
+</div>
+
+<!-- DISPARO -->
+<div class="box">
+<h2>💬 Disparo</h2>
+
+<textarea id="msg" placeholder="Mensagem... use {nome}" style="height:120px;"></textarea>
+
+<button onclick="enviar()">Enviar Mensagem</button>
+<button onclick="selecionarTodos()">Selecionar todos</button>
+<button onclick="limparSelecionados()">Limpar seleção</button>
+
+</div>
+
+</div>
+
+<!-- LISTA -->
+<div class="box">
+<h2>📋 Leads</h2>
+<div id="lista"></div>
+</div>
+
+</div>
+
+<script>
+
+let leads = JSON.parse(localStorage.getItem("leads")) || []
+
+function salvar() {
+  localStorage.setItem("leads", JSON.stringify(leads))
+}
+
+function addLead() {
+  const nome = document.getElementById("nome").value
+  const numero = document.getElementById("numero").value
+
+  if (!nome || !numero) return alert("Preencha tudo")
+
+  leads.push({
+    id: Date.now(),
+    nome,
+    numero,
+    status: "Frio",
+    selecionado: false,
+    ultimaMsg: null
+  })
+
+  salvar()
+  render()
+}
+
+function toggleStatus(id) {
+  const ordem = ["Frio", "Interessado", "Muito interessado", "Não interessado"]
+
+  leads = leads.map(l => {
+    if (l.id === id) {
+      const next = ordem[(ordem.indexOf(l.status) + 1) % ordem.length]
+      return { ...l, status: next }
+    }
+    return l
+  })
+
+  salvar()
+  render()
+}
+
+function toggleSelect(id) {
+  leads = leads.map(l => l.id === id ? { ...l, selecionado: !l.selecionado } : l)
+  salvar()
+  render()
+}
+
+function selecionarTodos() {
+  leads = leads.map(l => ({ ...l, selecionado: true }))
+  salvar()
+  render()
+}
+
+function limparSelecionados() {
+  leads = leads.map(l => ({ ...l, selecionado: false }))
+  salvar()
+  render()
+}
+
+function limparTudo() {
+  if (!confirm("Apagar tudo?")) return
+  localStorage.removeItem("leads")
+  leads = []
+  render()
+}
+
+function enviar() {
+  const msg = document.getElementById("msg").value
+  const agora = new Date().toLocaleString()
+
+  leads = leads.map(l => {
+    if (l.selecionado) {
+      const texto = msg.replace("{nome}", l.nome)
+      const url = `https://wa.me/${l.numero}?text=${encodeURIComponent(texto)}`
+      window.open(url, "_blank")
+
+      return { ...l, ultimaMsg: agora }
+    }
+    return l
+  })
+
+  salvar()
+  render()
+}
+
+function render() {
+  const lista = document.getElementById("lista")
+  const filtro = document.getElementById("filtro").value
+
+  lista.innerHTML = ""
+
+  leads
+    .filter(l => filtro === "todos" || l.status === filtro)
+    .forEach(l => {
+
+      let classe = "frio"
+      if (l.status === "Interessado") classe = "interessado"
+      if (l.status === "Muito interessado") classe = "muito"
+      if (l.status === "Não interessado") classe = "nao"
+
+      lista.innerHTML += `
+        <div class="lead">
+          <div>
+            <input type="checkbox" ${l.selecionado ? "checked" : ""} onclick="toggleSelect(${l.id})">
+            <b>${l.nome}</b> - ${l.numero}
+          </div>
+
+          <div class="status ${classe}" onclick="toggleStatus(${l.id})">
+            ${l.status}
+          </div>
+
+          <div class="small">
+            Última mensagem: ${l.ultimaMsg || "Nunca enviada"}
+          </div>
+        </div>
+      `
+    })
+}
+
+render()
+
+</script>
+
+</body>
+</html>
